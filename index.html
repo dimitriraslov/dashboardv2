@@ -773,9 +773,10 @@ function startTimer() {
     el.textContent=formatCountdown(ms);
     el.className='timer-val'+(ms<600000&&ms>0?' timer-urgent':'');
     updateMarketPills();
-    if(ms<=0&&!isLoading) { smartRefresh(); }
+    // ⚠️ Auto-refresh REMOVED — caused runaway credit consumption
+    // Refresh is manual only (Smart refresh / Full reload buttons)
   },30000);
-  // immediate
+  // immediate update
   const ms=getNextRefreshMs();
   const el=document.getElementById('timerVal');
   el.textContent=formatCountdown(ms);
@@ -833,25 +834,38 @@ function getAlignment(sym) {
 
 // ─── Batch fetch ──────────────────────────────────────────────────────────────
 async function fetchBatch(tdSyms,interval) {
+  // Fix 2: Hard credit guard — abort immediately if nearly out
+  if (creditLeft < 50) {
+    return{error:'CREDITS_EXHAUSTED: Less than 50 credits remaining. Refresh manually tomorrow.'};
+  }
+
   const size=interval==='4h'?200:interval==='1day'?150:100;
   const url=`https://api.twelvedata.com/time_series?symbol=${encodeURIComponent(tdSyms.join(','))}&interval=${interval}&outputsize=${size}&apikey=${API_KEY}`;
-  for(let t=0;t<3;t++){
+
+  // Fix 3: Only 1 attempt — no retry loops that multiply credit usage
+  // Exception: retry once on network error only (not on API errors)
+  for(let t=0;t<2;t++){
     try{
       const r=await fetch(url); if(!r.ok) return{error:`HTTP ${r.status}`};
       const d=await r.json();
       if(d.status==='error'){
-        if(d.code===429) { await sleep(20000); continue; }
-        if(d.code===403||String(d.message||'').toLowerCase().includes('credit')||String(d.message||'').toLowerCase().includes('limit')) {
+        // Credit errors: never retry, never waste another call
+        if(d.code===429||String(d.message||'').toLowerCase().includes('credit')||String(d.message||'').toLowerCase().includes('run out')) {
+          creditLeft=0; updateCreditUI();
           return{error:`CREDITS_EXHAUSTED: ${d.message}`};
         }
+        // Any other API error: return immediately, no retry
         return{error:`${d.code||''}: ${d.message||'API error'}`};
       }
       // Read real credit values from response headers
       updateCreditFromHeaders(r.headers);
       return{data:d};
-    }catch(e){if(t<2)await sleep(4000);}
+    }catch(e){
+      // Only retry on genuine network failure (fetch threw), not API errors
+      if(t<1) await sleep(3000);
+    }
   }
-  return{error:'Failed after retries'};
+  return{error:'Network error after 2 attempts'};
 }
 function parseSymData(raw) {
   if(!raw?.values?.length) return null;
@@ -933,6 +947,15 @@ function processBatchResult(tf, assets, res) {
 // Option 4: render 4H immediately when it resolves, others fill in behind it
 async function loadAll(smart) {
   if (isLoading) return;
+
+  // Fix 2 (loadAll level): Block load entirely if credits are exhausted
+  if (creditLeft < 50 && creditUsed > 0) {
+    const b = document.getElementById('errBox');
+    b.style.display = 'block';
+    b.innerHTML = `<strong>⚠️ Out of API credits (${creditLeft} left)</strong><br>Credits reset at midnight UTC (8pm Montreal). Your cached signals are preserved — come back tomorrow.`;
+    document.getElementById('progLbl').textContent = 'Load blocked — no credits remaining';
+    return;
+  }
   isLoading = true;
   errLog    = [];
 
