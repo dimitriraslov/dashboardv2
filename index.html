@@ -220,19 +220,23 @@ tbody td{padding:6px 9px;vertical-align:middle}
         <th onclick="setSort('sym')"    style="width:115px">Asset <span id="arr-sym"></span></th>
         <th onclick="setSort('narr')"   style="width:90px">Narrative <span id="arr-narr"></span></th>
         <th onclick="setSort('mcap')"   style="width:75px">Mkt Cap <span id="arr-mcap"></span></th>
+        <th class="c" style="width:42px;color:var(--blue);font-size:9px">1D</th>
         <th onclick="setSort('signal')" class="c" style="width:62px">Signal <span id="arr-signal"></span></th>
-        <th onclick="setSort('age')"    class="r" style="width:65px">Flip age <span id="arr-age"></span></th>
-        <th onclick="setSort('rsi')"    class="c" style="width:62px">RSI <span id="arr-rsi"></span></th>
-        <th onclick="setSort('dist')"   class="r" style="width:70px">ST dist% <span id="arr-dist"></span></th>
-        <th onclick="setSort('price')"  class="r" style="width:88px">Price <span id="arr-price"></span></th>
+        <th onclick="setSort('age')"    class="r" style="width:60px">Flip age <span id="arr-age"></span></th>
+        <th onclick="setSort('rsi')"    class="c" style="width:58px">RSI 1D <span id="arr-rsi"></span></th>
+        <th class="c" style="width:42px;color:#a78bfa;font-size:9px">1W</th>
+        <th onclick="setSort('signal1w')" class="c" style="width:62px">Signal <span id="arr-signal1w"></span></th>
+        <th onclick="setSort('rsi1w')"    class="c" style="width:58px">RSI 1W <span id="arr-rsi1w"></span></th>
+        <th onclick="setSort('dist')"   class="r" style="width:68px">ST dist% <span id="arr-dist"></span></th>
+        <th onclick="setSort('price')"  class="r" style="width:84px">Price <span id="arr-price"></span></th>
       </tr>
     </thead>
-    <tbody id="tbody"><tr class="msg-row"><td colspan="9">Loading...</td></tr></tbody>
+    <tbody id="tbody"><tr class="msg-row"><td colspan="11">Loading...</td></tr></tbody>
   </table>
 </div>
 
 <div class="footer">
-  <span>Supertrend ATR(10) Factor 3.0 · RSI(14) · Market caps as of Aug 2026 · data via GitHub Actions</span>
+  <span>Supertrend ATR(10) Factor 3.0 · RSI(14) · 1D daily · 1W weekly (updated Fridays) · Market caps Aug 2026</span>
   <span id="footNote"></span>
 </div>
 </div>
@@ -329,7 +333,7 @@ async function loadData(){
     document.getElementById('liveDot').className='dot error';
     document.getElementById('lastUpdated').textContent='Error: '+e.message;
     document.getElementById('tbody').innerHTML=
-      `<tr class="msg-row"><td colspan="9">Could not load data.<br>
+      `<tr class="msg-row"><td colspan="11">Could not load data.<br>
        Run the scanner once to generate dashboard_data.json.<br>${e.message}</td></tr>`;
   }
 }
@@ -464,15 +468,17 @@ function setSort(col){
 }
 function sortVal(a){
   switch(sortCol){
-    case'sym':    return a.sym;
-    case'narr':   return a.narrative;
-    case'mcap':   return MCAP_ORDER[a.mcap]??2;
-    case'signal': return a.signal==='bull'?0:a.signal==='bear'?1:2;
-    case'age':    return a.bars_since_flip??9999;
-    case'rsi':    return a.rsi??50;
-    case'dist':   return(a.price&&a.supertrend)?Math.abs((a.price-a.supertrend)/a.supertrend*100):9999;
-    case'price':  return a.price??0;
-    default:      return 0;
+    case'sym':      return a.sym;
+    case'narr':     return a.narrative;
+    case'mcap':     return MCAP_ORDER[a.mcap]??2;
+    case'signal':   return a.signal==='bull'?0:a.signal==='bear'?1:2;
+    case'signal1w': return a.signal_1w==='bull'?0:a.signal_1w==='bear'?1:2;
+    case'age':      return a.bars_since_flip??9999;
+    case'rsi':      return a.rsi??50;
+    case'rsi1w':    return a.rsi_1w??50;
+    case'dist':     return(a.price&&a.supertrend)?Math.abs((a.price-a.supertrend)/a.supertrend*100):9999;
+    case'price':    return a.price??0;
+    default:        return 0;
   }
 }
 
@@ -496,7 +502,7 @@ function render(){
 
   const tbody=document.getElementById('tbody');
   if(!rows.length){
-    tbody.innerHTML='<tr class="msg-row"><td colspan="9">No assets match this filter</td></tr>';
+    tbody.innerHTML='<tr class="msg-row"><td colspan="11">No assets match this filter</td></tr>';
     updateStats();return;
   }
   tbody.innerHTML=rows.map((a,i)=>{
@@ -506,9 +512,13 @@ function render(){
       <td><div class="asym">${a.sym}${isNew?'<span class="new-badge">NEW</span>':''}</div><div class="aname">${a.name}</div></td>
       <td><span class="ntag">${a.narrative.replace('Robotics & Physical AI','Robotics').replace(' & ',' / ')}</span></td>
       <td>${mcapHTML(a.sym)}</td>
+      <td style="width:12px;background:rgba(59,130,246,0.03);border-right:1px solid rgba(59,130,246,0.1)"></td>
       <td style="text-align:center">${sigHTML(a.signal)}</td>
       <td style="text-align:right">${fmtAge(a.bars_since_flip)}</td>
       <td style="text-align:center">${rsiHTML(a.rsi)}</td>
+      <td style="width:12px;background:rgba(167,139,250,0.03);border-right:1px solid rgba(167,139,250,0.1)"></td>
+      <td style="text-align:center">${sigHTML(a.signal_1w)}</td>
+      <td style="text-align:center">${rsiHTML(a.rsi_1w)}</td>
       <td style="text-align:right">${distHTML(a.price,a.supertrend,a.signal)}</td>
       <td class="price">${fmtPrice(a.price)}</td>
     </tr>`;
