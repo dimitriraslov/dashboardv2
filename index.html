@@ -108,6 +108,8 @@ tbody td{padding:6px 9px;vertical-align:middle}
 .asym{font-weight:700;font-size:12px;color:var(--text)}
 .aname{font-size:10px;color:var(--muted);margin-top:1px}
 .new-badge{display:inline-block;font-size:8px;font-weight:800;background:var(--amber-bg);color:var(--amber);border:1px solid rgba(245,158,11,.25);padding:1px 5px;border-radius:3px;margin-left:5px;letter-spacing:.05em;vertical-align:middle}
+.pb-buy{display:inline-block;font-size:8px;font-weight:800;background:rgba(34,197,94,.15);color:var(--bull);border:1px solid rgba(34,197,94,.3);padding:1px 5px;border-radius:3px;margin-left:4px;letter-spacing:.04em;vertical-align:middle}
+.pb-sell{display:inline-block;font-size:8px;font-weight:800;background:rgba(239,68,68,.15);color:var(--bear);border:1px solid rgba(239,68,68,.3);padding:1px 5px;border-radius:3px;margin-left:4px;letter-spacing:.04em;vertical-align:middle}
 .ntag{font-size:9px;font-weight:700;padding:2px 6px;border-radius:4px;display:inline-block;white-space:nowrap;letter-spacing:.04em;background:var(--bg3);color:var(--muted)}
 .sig{display:inline-flex;align-items:center;justify-content:center;gap:4px;font-size:10px;font-weight:800;padding:3px 7px;border-radius:4px;min-width:50px;letter-spacing:.04em}
 .sdot{width:4px;height:4px;border-radius:50%;flex-shrink:0}
@@ -185,6 +187,7 @@ tbody td{padding:6px 9px;vertical-align:middle}
   <div class="stat"><div class="stat-l">RSI &lt;30 Oversold</div><div class="stat-v sv-flip" id="sOs">—</div></div>
   <div class="stat"><div class="stat-l">RSI &gt;70 Overbought</div><div class="stat-v sv-neut" id="sOb">—</div></div>
   <div class="stat"><div class="stat-l">New flips</div><div class="stat-v sv-flip" id="sFlip">—</div></div>
+  <div class="stat"><div class="stat-l">🎯 Pullback setups</div><div class="stat-v sv-flip" id="sPb">—</div></div>
 </div>
 
 <!-- Filters -->
@@ -196,6 +199,8 @@ tbody td{padding:6px 9px;vertical-align:middle}
   <button class="fb f-os"      onclick="setSig(this,'os')">RSI &lt;30</button>
   <button class="fb f-os"      onclick="setSig(this,'extreme')">RSI &lt;20</button>
   <button class="fb f-os"      onclick="setSig(this,'new')">New flips</button>
+  <button class="fb f-bull"    onclick="setSig(this,'pb_buy')">🎯 Pullback buys</button>
+  <button class="fb f-bear"    onclick="setSig(this,'pb_sell')">🎯 Pullback sells</button>
 </div>
 <div class="filter-row">
   <span class="filter-lbl">Mkt Cap:</span>
@@ -492,6 +497,8 @@ function render(){
     if(currentSig==='os')return a.rsi!==null&&a.rsi<30;
     if(currentSig==='extreme')return a.rsi!==null&&a.rsi<20;
     if(currentSig==='new')return a.bars_since_flip!==null&&a.bars_since_flip<=1;
+    if(currentSig==='pb_buy')return a.pb_buy_1d||a.pb_buy_1w;
+    if(currentSig==='pb_sell')return a.pb_sell_1d||a.pb_sell_1w;
     return true;
   });
   rows.sort((a,b)=>{
@@ -536,10 +543,14 @@ function updateStats(){
     if(a.rsi!==null&&a.rsi<30)os++;
     if(a.rsi!==null&&a.rsi>70)ob++;
   });
+  const pbBuy=allAssets.filter(a=>a.pb_buy_1d||a.pb_buy_1w).length;
+  const pbSell=allAssets.filter(a=>a.pb_sell_1d||a.pb_sell_1w).length;
   document.getElementById('sBull').textContent=bull;
   document.getElementById('sBear').textContent=bear;
   document.getElementById('sOs').textContent=os;
   document.getElementById('sOb').textContent=ob;
+  const pbEl=document.getElementById('sPb');
+  if(pbEl)pbEl.textContent=pbBuy+pbSell;
 }
 
 function setNarr(btn,n){document.querySelectorAll('#narrRow .fb').forEach(b=>b.classList.remove('active'));btn.classList.add('active');currentNarr=n;render();}
